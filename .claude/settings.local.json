@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(mv \"c:/Projects/Embedded/Round Display/.pio/libdeps/seeed_xiao_esp32s3/Seeed Arduino Round display/lv_conf.h\" \"c:/Projects/Embedded/Round Display/.pio/libdeps/seeed_xiao_esp32s3/Seeed Arduino Round display/lv_conf.h.bak\")",
+      "Bash(pio run *)",
+      "Bash(where pio *)",
+      "Read(//c/Users/arthu/.platformio/penv/Scripts/**)",
+      "Bash(\"C:/Users/arthu/.platformio/penv/Scripts/pio.exe\" run *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Projects\\Embedded\\Round Display\\.pio\\libdeps\\seeed_xiao_esp32s3\\Seeed Arduino Round display"
+    ]
+  }
+}

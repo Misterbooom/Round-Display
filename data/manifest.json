@@ -1,0 +1,14 @@
+{
+  "name": "Bullhorn",
+  "mode": "gif",
+  "colors": {
+    "body": "#F26522",
+    "bg": "#000000",
+    "text": "#FFFFFF",
+    "textDim": "#886644",
+    "ink": "#F26522"
+  },
+  "states": {
+    "sleep": "sleep.gif"
+  }
+}
