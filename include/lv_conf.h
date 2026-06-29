@@ -115,7 +115,7 @@
  *==================*/
 
 /** Enable all commonly-used widgets. Disable what you don't need to save flash. */
-#define LV_USE_ANIMIMG     0   /**< Animated image (not needed for basic UI) */
+#define LV_USE_ANIMIMG     1   /**< Animated image (not needed for basic UI) */
 #define LV_USE_ARC         1   /**< Arc — great for round displays! */
 #define LV_USE_BAR         1   /**< Progress bar */
 #define LV_USE_BTN         1   /**< Button */
@@ -125,7 +125,7 @@
 #define LV_USE_CHART       0   /**< Chart / graph */
 #define LV_USE_CHECKBOX    0   /**< Checkbox */
 #define LV_USE_DROPDOWN    0   /**< Drop-down list */
-#define LV_USE_IMAGE       0   /**< Image (enable if you want to show bitmaps) */
+#define LV_USE_IMAGE       1   /**< Image (enable if you want to show bitmaps) */
 #define LV_USE_IMAGEBUTTON 0   /**< Image button */
 #define LV_USE_KEYBOARD    0   /**< On-screen keyboard */
 #define LV_USE_LABEL       1   /**< Text label */

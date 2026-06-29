@@ -80,7 +80,7 @@ namespace ClockScreen
 
     lv_obj_set_style_radius(batteryBorder, 4, 0);
     lv_obj_set_style_pad_all(batteryBorder, 0, 0);
-    lv_obj_align(batteryBorder, LV_ALIGN_TOP_MID, 0, -30);
+    lv_obj_align(batteryBorder, LV_ALIGN_TOP_MID, 0, 30);
 
     batteryTerminal = lv_obj_create(scr);
     makeStatic(batteryTerminal);

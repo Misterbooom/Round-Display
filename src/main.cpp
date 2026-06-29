@@ -74,7 +74,7 @@ void setup()
   lv_display_set_buffers(disp, buf, NULL, sizeof(buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
   lv_obj_set_style_bg_color(lv_scr_act(), lv_color_make(14, 15, 14), 0);
-
+  
   TouchScreen::createInstance();
 
   // lv_obj_t *statusLabel = lv_label_create(lv_scr_act());

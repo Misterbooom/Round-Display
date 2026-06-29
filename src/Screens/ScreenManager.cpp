@@ -21,6 +21,11 @@ namespace WeatherScreen
   lv_obj_t *create();
   void update();
   void destroy(lv_obj_t *);
+  void updateWeather(const char *temperature,
+                     const char *condition,
+                     const char *icon,
+                     int high,
+                     int low);
 }
 
 namespace SettingsScreen

@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 from bleak import BleakScanner, BleakClient
 import requests
+import json
 DEVICE_NAME = "Round-Display"
 RX_UUID = "1e5d03d4-a534-4c81-bc9b-3056bf878d15"
 TX_UUID = "44d2187d-f65e-4a55-b5fa-00da1726c6f1"
@@ -24,7 +25,7 @@ def get_weather(city: str) -> str:
 
     results = geo.json().get("results")
     if not results:
-        raise RuntimeError(f"Город '{city}' не найден")
+        raise RuntimeError(f"City '{city}' not found")
 
     place = results[0]
     latitude = place["latitude"]
@@ -60,21 +61,26 @@ def get_weather(city: str) -> str:
 
     print(f"{city_name}: {temp}°C")
 
-    return (
-        f"WEATHER:"
-        f"temp={temp};"
-        f"feels={feels};"
-        f"humidity={humidity};"
-        f"code={code};"
-        f"wind={wind};"
-    )
+    payload = {
+        "city": city_name,
+        "latitude": latitude,
+        "longitude": longitude,
+        "temperature_c": temp,
+        "feels_like_c": feels,
+        "humidity_percent": humidity,
+        "weather_code": code,
+        "wind_kmh": wind,
+        "fetched_at": datetime.utcnow().isoformat() + "Z",
+    }
+
+    return json.dumps(payload, separators=(",", ":"))
 
 async def main():
     print("Scanning for BLE devices (5s)...")
     all_devices = await BleakScanner.discover(timeout=5.0, return_adv=True)
 
     if not all_devices:
-        print("❌ No BLE devices found at all — is PC Bluetooth on?")
+        print(" No BLE devices found at all — is PC Bluetooth on?")
         return
 
     print(f"Found {len(all_devices)} device(s):")
@@ -92,7 +98,7 @@ async def main():
     )
 
     if device is None:
-        print(f"❌ '{DEVICE_NAME}' not found in scan results")
+        print(f" '{DEVICE_NAME}' not found in scan results")
         return
 
     async with BleakClient(device) as client:
@@ -114,7 +120,7 @@ async def main():
 
             await client.write_gatt_char(
                 RX_UUID,
-                f"WEATHER:{get_weather("Gdansk")}"
+                ("WEATHER:" + get_weather('Gdansk')).encode() 
             )
             await asyncio.sleep(60*30)
 
