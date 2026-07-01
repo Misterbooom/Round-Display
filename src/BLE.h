@@ -3,7 +3,8 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 #include <string>
-
+#include <ArduinoJson.h>
+#include "Screens/ScreenManager.h"
 namespace Ble
 {
   inline constexpr char SERVICE_UUID[] = "6e7bdab4-e3c6-45ce-a0ef-f7e4d2c8ae45";
@@ -13,7 +14,7 @@ namespace Ble
 
   inline NimBLECharacteristic *txCharacteristic = nullptr;
   inline NimBLEServer *server = nullptr;
-
+  inline std::function<bool(const char *)> onWeatherReceive = nullptr;
   inline void handleCommand(String command)
   {
     command.trim();
@@ -23,12 +24,18 @@ namespace Ble
     if (command.startsWith("TIME:"))
     {
       String time = command.substring(5);
-      Serial.println("New time: " + time);
     }
     else if (command.startsWith("WEATHER:"))
     {
-      String weather = command.substring(8);
-      Serial.println("Weather: " + weather);
+      const char *json = command.c_str() + 8;
+
+      Serial.print("Weather: ");
+      Serial.println(json);
+
+      if (onWeatherReceive)
+      {
+        onWeatherReceive(json);
+      }
     }
     else if (command == "PING")
     {

@@ -33,7 +33,10 @@ static void dispFlush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map
 
   lv_display_flush_ready(disp); // tell LVGL we're done drawing
 }
-
+static uint32_t lvglTick()
+{
+  return static_cast<uint32_t>(millis());
+}
 void setup()
 {
 
@@ -66,15 +69,16 @@ void setup()
 
   // ── 5. LVGL init ───────────────────────────────────────────────────────
   lv_init();
+  lv_tick_set_cb(lvglTick);
 
   lv_display_t *disp = lv_display_create(240, 240);
   lv_display_set_flush_cb(disp, dispFlush);
 
-  static lv_color_t buf[240 * 10];
+  static lv_color_t buf[240 * 60];
   lv_display_set_buffers(disp, buf, NULL, sizeof(buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
   lv_obj_set_style_bg_color(lv_scr_act(), lv_color_make(14, 15, 14), 0);
-  
+
   TouchScreen::createInstance();
 
   // lv_obj_t *statusLabel = lv_label_create(lv_scr_act());
@@ -110,6 +114,7 @@ void setup()
   screensInit();
   TouchScreen::onSwipeLeft = nextScreen;
   TouchScreen::onSwipeRight = previousScreen;
+  Ble::onWeatherReceive = WeatherScreen::updateWeather;
 }
 
 // ╔════════════════════════════════════════════════════════════════════════════╗
@@ -118,9 +123,7 @@ void setup()
 
 void loop()
 {
-  lv_tick_inc(5);
-
-  screensLoop();
   lv_timer_handler();
-  delay(5);
+  screensLoop();
+  delay(1);
 }
