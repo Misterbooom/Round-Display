@@ -40,9 +40,9 @@ namespace SettingsScreen
 }
 
 void screensInit();
-
+void makeStatic(lv_obj_t *obj);
 void screensSwitch(Screen s, bool forward = true);
-
+void createTitle(lv_obj_t *scr, const char *text);
 void screensLoop();
 void nextScreen();
 void previousScreen();

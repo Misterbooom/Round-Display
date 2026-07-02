@@ -55,8 +55,8 @@ void screensSwitch(Screen s, bool forward)
       _screens[s],
 
       forward
-          ? LV_SCR_LOAD_ANIM_OVER_LEFT
-          : LV_SCR_LOAD_ANIM_OVER_RIGHT,
+          ? LV_SCR_LOAD_ANIM_MOVE_LEFT
+          : LV_SCR_LOAD_ANIM_MOVE_RIGHT,
 
       280,
       0,
@@ -114,4 +114,27 @@ void screensLoop()
 Screen screensCurrent()
 {
   return _current;
+}
+void makeStatic(lv_obj_t *obj)
+{
+  lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+}
+void createTitle(lv_obj_t *scr, const char *text)
+{
+  lv_obj_t *title = lv_label_create(scr);
+  lv_label_set_text(title, text);
+
+  lv_obj_set_style_text_color(title, lv_color_hex(0xE4E9E5), 0);
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_letter_space(title, 2, 0);
+
+  lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 18);
+
+  lv_obj_t *titleLine = lv_obj_create(scr);
+  lv_obj_set_size(titleLine, 54, 1);
+  lv_obj_set_style_bg_color(titleLine, lv_color_hex(0x66746C), 0);
+  lv_obj_set_style_bg_opa(titleLine, 150, 0);
+  lv_obj_set_style_border_width(titleLine, 0, 0);
+  lv_obj_align(titleLine, LV_ALIGN_TOP_MID, 0, 45);
 }

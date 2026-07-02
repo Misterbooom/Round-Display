@@ -37,6 +37,21 @@ static uint32_t lvglTick()
 {
   return static_cast<uint32_t>(millis());
 }
+void createGlobalBackground()
+{
+  lv_obj_t *bg = lv_obj_create(lv_layer_bottom());
+
+  lv_obj_set_size(bg, LV_PCT(100), LV_PCT(100));
+  lv_obj_set_style_pad_all(bg, 0, 0);
+  lv_obj_set_style_border_width(bg, 0, 0);
+
+  lv_obj_set_style_bg_color(bg, lv_color_hex(0x151B19), 0);
+  lv_obj_set_style_bg_grad_color(bg, lv_color_hex(0x080A09), 0);
+  lv_obj_set_style_bg_grad_dir(bg, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_bg_opa(bg, LV_OPA_COVER, 0);
+
+  lv_obj_clear_flag(bg, LV_OBJ_FLAG_SCROLLABLE);
+}
 void setup()
 {
 
@@ -78,7 +93,7 @@ void setup()
   lv_display_set_buffers(disp, buf, NULL, sizeof(buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
   lv_obj_set_style_bg_color(lv_scr_act(), lv_color_make(14, 15, 14), 0);
-
+  createGlobalBackground();
   TouchScreen::createInstance();
 
   // lv_obj_t *statusLabel = lv_label_create(lv_scr_act());

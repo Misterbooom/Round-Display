@@ -153,10 +153,10 @@ namespace ClockScreen
     lv_obj_t *scr = lv_obj_create(nullptr);
 
     makeStatic(scr);
-    lv_obj_set_style_bg_color(scr, lv_color_hex(0x151B19), 0);
-    lv_obj_set_style_bg_grad_color(scr, lv_color_hex(0x080A09), 0);
-    lv_obj_set_style_bg_grad_dir(scr, LV_GRAD_DIR_VER, 0);
-    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+    // lv_obj_set_style_bg_color(scr, lv_color_hex(0x151B19), 0);
+    // lv_obj_set_style_bg_grad_color(scr, lv_color_hex(0x080A09), 0);
+    // lv_obj_set_style_bg_grad_dir(scr, LV_GRAD_DIR_VER, 0);
+    lv_obj_set_style_bg_opa(scr, LV_OPA_0, 0);
     lv_obj_set_style_border_width(scr, 0, 0);
     lv_obj_set_style_pad_all(scr, 0, 0);
 
