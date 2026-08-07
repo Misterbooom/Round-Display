@@ -56,6 +56,22 @@ namespace Callbacks
     Ble::requestWeather();
   }
 
+  inline void brightness_cb(lv_event_t *event)
+  {
+    Config::data.brightness = static_cast<uint16_t>(sliderValue(event));
+    Config::save();
+    Serial.printf("[Settings] Brightness: %u%%\n",
+                  Config::data.brightness);
+  }
+
+  inline void batteryUpdateRate_cb(lv_event_t *event)
+  {
+    Config::data.batteryUpdateMin = static_cast<uint16_t>(sliderValue(event));
+    Config::save();
+    Serial.printf("[Settings] Battery refresh: %u min\n",
+                  Config::data.batteryUpdateMin);
+  }
+
   inline void screenTimeout_cb(lv_event_t *event)
   {
     Config::data.timeoutSec = static_cast<uint16_t>(sliderValue(event));
@@ -84,5 +100,9 @@ namespace Callbacks
     Config::save();
     Serial.printf("[Settings] Always on: %s\n",
                   Config::data.timeoutSec == 0 ? "enabled" : "disabled");
+  }
+  inline void restartDisplay_cb(lv_event_t *event)
+  {
+    ESP.restart();
   }
 }

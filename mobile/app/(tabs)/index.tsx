@@ -8,10 +8,20 @@ import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { typography } from '@/constants/theme'
 import { useThemeColor } from '@/hooks/use-theme-color'
+import { bleService } from '@/services/BLEService'
 
 const CIRCUMFERENCE = 2 * Math.PI * 45
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
+function formatTime(date: Date | null): string {
+	if (date == null) {
+		return '--:--'
+	}
+	const pad = (n: number) => n.toString().padStart(2, '0')
+	const hours = pad(date.getHours())
+	const minutes = pad(date.getMinutes())
 
+	return `${hours}:${minutes}`
+}
 function PulsingDot({ color }: { color: string }) {
 	const opacity = useRef(new Animated.Value(1)).current
 
@@ -86,11 +96,20 @@ export default function HomeScreen() {
 	const trackColor = useThemeColor({}, 'border')
 	const primaryColor = useThemeColor({}, 'primary')
 	const iconColor = useThemeColor({}, 'icon')
-
-	const percent = 80
-	const targetOffset = CIRCUMFERENCE * (1 - percent / 100)
+	const errorColor = useThemeColor({}, 'error')
 
 	const [brightness, setBrightness] = useState(60)
+	const [isConnected, setIsConnected] = useState(
+		bleService.connectionState === 'connected',
+	)
+	const [batteryPercentage, setBatteryPercentage] = useState(
+		bleService.batteryPercentage,
+	)
+	const [lastSynced, setLastSynced] = useState(bleService.lastTimeSynced)
+
+	const targetOffset =
+		CIRCUMFERENCE *
+		(1 - (isNaN(batteryPercentage) ? 0 : batteryPercentage) / 100)
 
 	const animOffset = useRef(new Animated.Value(CIRCUMFERENCE)).current
 
@@ -101,6 +120,31 @@ export default function HomeScreen() {
 			useNativeDriver: true,
 		}).start()
 	}, [targetOffset])
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			console.log(`sending brightness: ${brightness}`)
+			bleService.send(`brightness:${brightness}`).catch(() => {})
+		}, 400)
+		return () => clearTimeout(timer)
+	}, [brightness])
+	useEffect(() => {
+		const unsub = bleService.onEvent(async event => {
+			if (event.type === 'connectionStateChange') {
+				setIsConnected(event.state === 'connected')
+				setLastSynced(bleService.lastTimeSynced)
+			}
+			if (
+				event.type === 'connectionStateChange' ||
+				('payload' in event &&
+					typeof event.payload === 'string' &&
+					event.payload.startsWith('battery:'))
+			) {
+				setBatteryPercentage(bleService.batteryPercentage)
+				setLastSynced(bleService.lastTimeSynced)
+			}
+		})
+		return unsub
+	}, [])
 
 	return (
 		<ThemedView style={styles.root}>
@@ -146,23 +190,29 @@ export default function HomeScreen() {
 								lineHeight: typography.display.lineHeight,
 								letterSpacing: -4,
 							}}>
-							{percent}
+							{isNaN(batteryPercentage) ? '--' : batteryPercentage}
 							<Text style={{ fontSize: 24, letterSpacing: 0 }}>%</Text>
 						</ThemedText>
 
 						<ThemedView
-							lightColor='rgba(212, 232, 212, 0.5)'
-							darkColor='rgba(27, 43, 30, 0.5)'
+							lightColor={
+								isConnected
+									? 'rgba(212, 232, 212, 0.5)'
+									: 'rgba(232, 212, 212, 0.5)'
+							}
+							darkColor={
+								isConnected ? 'rgba(27, 43, 30, 0.5)' : 'rgba(43, 27, 27, 0.5)'
+							}
 							style={[styles.connectedStatus, { borderColor: trackColor }]}>
-							<PulsingDot color={primaryColor} />
+							<PulsingDot color={isConnected ? primaryColor : errorColor} />
 							<ThemedText
 								style={{
-									color: primaryColor,
+									color: isConnected ? primaryColor : errorColor,
 									textTransform: 'uppercase',
 									fontSize: typography.label.fontSize,
 									fontFamily: typography.label.fontFamily,
 								}}>
-								connected
+								{isConnected ? 'connected' : 'disconnected'}
 							</ThemedText>
 						</ThemedView>
 					</ThemedView>
@@ -190,7 +240,7 @@ export default function HomeScreen() {
 
 				<SettingsRow icon='schedule' label='Last synced' delay={350}>
 					<ThemedText type='default' style={{ color: iconColor }}>
-						12:34 PM
+						{formatTime(lastSynced)}
 					</ThemedText>
 				</SettingsRow>
 

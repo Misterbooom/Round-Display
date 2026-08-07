@@ -21,6 +21,8 @@
 
 static TFT_eSPI tft = TFT_eSPI(240, 240); // display object (240×240 round)
 
+static int currentPwmValue = -1;
+static uint32_t lastFadeTime = 0;
 static bool backlightOn = true;
 
 static void updateBacklight()
@@ -29,13 +31,37 @@ static void updateBacklight()
                     lv_display_get_inactive_time(nullptr) <
                         static_cast<uint32_t>(Config::data.timeoutSec) * 1000UL;
 
-  if (shouldBeOn != backlightOn)
+  int targetPwmValue = shouldBeOn ? ((Config::data.brightness * 255) / 100) : 0;
+  backlightOn = shouldBeOn;
+
+  if (currentPwmValue == -1)
   {
-    backlightOn = shouldBeOn;
-    digitalWrite(D6, backlightOn ? HIGH : LOW);
+    currentPwmValue = targetPwmValue;
+    analogWrite(D6, currentPwmValue);
+    return;
+  }
+
+  if (currentPwmValue != targetPwmValue)
+  {
+    uint32_t now = millis();
+
+    if (now - lastFadeTime >= 5)
+    {
+      lastFadeTime = now;
+
+      int diff = targetPwmValue - currentPwmValue;
+      int step = diff / 10;
+
+      if (step == 0)
+      {
+        step = (diff > 0) ? 1 : -1;
+      }
+
+      currentPwmValue += step;
+      analogWrite(D6, currentPwmValue);
+    }
   }
 }
-
 static void dispFlush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
   uint16_t w = lv_area_get_width(area);

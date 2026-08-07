@@ -18,6 +18,9 @@ namespace Ble
   inline NimBLEServer *server = nullptr;
   inline std::function<bool(const char *)> onWeatherReceive = nullptr;
   inline uint32_t lastWeatherRequestMs = 0;
+  inline uint32_t lastBatterySendMs = 0;
+  inline bool pendingInitialBattery = false;
+  inline uint32_t batteryDelayStartMs = 0;
 
   inline bool requestWeather()
   {
@@ -44,19 +47,57 @@ namespace Ble
     lastWeatherRequestMs = millis();
   }
 
-  inline void update()
+  inline void sendBattery()
   {
-    if (Config::data.weatherUpdateMin == 0 || server == nullptr ||
+    if (server == nullptr || txCharacteristic == nullptr ||
         server->getConnectedCount() == 0)
     {
       return;
     }
 
-    uint32_t intervalMs =
-        static_cast<uint32_t>(Config::data.weatherUpdateMin) * 60UL * 1000UL;
-    if (millis() - lastWeatherRequestMs >= intervalMs)
+    int pct = Utils::batteryPercent();
+    if (pct < 0)
+      return; // invalid battery reading
+
+    char buf[32];
+    snprintf(buf, sizeof(buf), "battery:%d%%", pct);
+    Serial.printf("[Sending battery]: %s", &buf);
+    txCharacteristic->setValue(buf);
+    txCharacteristic->notify();
+  }
+
+  inline void update()
+  {
+    if (server == nullptr || server->getConnectedCount() == 0)
     {
-      requestWeather();
+      return;
+    }
+
+    if (Config::data.weatherUpdateMin > 0)
+    {
+      uint32_t intervalMs =
+          static_cast<uint32_t>(Config::data.weatherUpdateMin) * 60UL * 1000UL;
+      if (millis() - lastWeatherRequestMs >= intervalMs)
+      {
+        requestWeather();
+      }
+    }
+
+    if (pendingInitialBattery && (millis() - batteryDelayStartMs >= 2000))
+    {
+      sendBattery();
+      lastBatterySendMs = millis();
+      pendingInitialBattery = false;
+    }
+    else if (Config::data.batteryUpdateMin > 0)
+    {
+      uint32_t batteryIntervalMs =
+          static_cast<uint32_t>(Config::data.batteryUpdateMin) * 60UL * 1000UL;
+      if (millis() - lastBatterySendMs >= batteryIntervalMs)
+      {
+        sendBattery();
+        lastBatterySendMs = millis();
+      }
     }
   }
 
@@ -91,6 +132,12 @@ namespace Ble
         txCharacteristic->notify();
       }
     }
+    else if (command.startsWith("brightness:"))
+    {
+      const char *json = command.c_str() + 11;
+      Config::data.brightness = atoi(json);
+      Serial.printf("[BLE] Setting brightness to %d\n", Config::data.brightness, json);
+    }
   }
 
   class RxCallbacks : public NimBLECharacteristicCallbacks
@@ -115,6 +162,8 @@ namespace Ble
         NimBLEConnInfo &connInfo) override
     {
       resetWeatherRequestTimer();
+      pendingInitialBattery = true;
+      batteryDelayStartMs = millis();
       Serial.println("PC connected");
     }
 

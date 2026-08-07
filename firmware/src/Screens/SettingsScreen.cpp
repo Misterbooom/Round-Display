@@ -60,14 +60,22 @@ namespace SettingsScreen
         static auto weatherPage = SettingsRenderer::makePage("Weather", weatherItems);
 
         static auto timeoutItems = SettingsRenderer::makeItems(
+            SettingsRenderer::makeSlider("Brightness", 10, 100, Config::data.brightness, "%", Callbacks::brightness_cb),
             SettingsRenderer::makeSlider("Screen timeout", 5, 120, Config::data.timeoutSec == 0 ? 30 : Config::data.timeoutSec, "s", Callbacks::screenTimeout_cb),
             SettingsRenderer::makeSwitch("Always on", "Off", "On", Config::data.timeoutSec == 0, Callbacks::alwaysOn_cb));
         static auto timeoutPage = SettingsRenderer::makePage("Screen", timeoutItems);
 
+        static auto systemItems = SettingsRenderer::makeItems(
+            SettingsRenderer::makeSlider("Battery Refresh", 1, 60, Config::data.batteryUpdateMin, "min", Callbacks::batteryUpdateRate_cb),
+            SettingsRenderer::makeAction("Restart Display",Callbacks::restartDisplay_cb )
+        );
+        static auto systemPage = SettingsRenderer::makePage("System", systemItems);
+
         static auto displayItems = SettingsRenderer::makeItems(
             SettingsRenderer::makeTab("Clock", clockPage),
             SettingsRenderer::makeTab("Weather", weatherPage),
-            SettingsRenderer::makeTab("Screen", timeoutPage));
+            SettingsRenderer::makeTab("Screen", timeoutPage),
+            SettingsRenderer::makeTab("System", systemPage));
         static auto startPage = SettingsRenderer::makePage("Settings", displayItems);
 
         SettingsRenderer::render(menu, startPage);
