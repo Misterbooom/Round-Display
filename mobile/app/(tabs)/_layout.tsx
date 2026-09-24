@@ -49,12 +49,12 @@ export default function TabLayout() {
 						),
 					}}
 				/>
-				<Tabs.Screen
-					name='connect'
+							<Tabs.Screen
+					name='developer'
 					options={{
-						title: 'Connect',
+						title: 'Developer',
 						tabBarIcon: ({ color }) => (
-							<IconSymbol size={28} name='antenna.radiowaves.left.and.right' color={color} />
+							<IconSymbol size={28} name='chevron.left.forwardslash.chevron.right' color={color} />
 						),
 					}}
 				/>

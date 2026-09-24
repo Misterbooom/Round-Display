@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "secrets.h"
 #include "WiFi.h"
 
 namespace Utils

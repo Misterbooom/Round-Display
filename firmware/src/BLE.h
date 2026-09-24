@@ -229,8 +229,7 @@ namespace Ble
 
     advertising->addServiceUUID(SERVICE_UUID);
 
-    // UUID остаётся в advertising packet,
-    // имя уйдёт в scan response
+  
     advertising->enableScanResponse(true);
     advertising->setName(DEVICE_NAME);
 

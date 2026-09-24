@@ -1,17 +1,18 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons'
-import { useEffect, useRef, useState } from 'react'
-import { Animated, Pressable, StyleSheet, Text } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Alert, Animated, Pressable, StyleSheet, Text } from 'react-native'
 import AnimatedReanimated, { FadeIn, FadeInUp } from 'react-native-reanimated'
 import Svg, { Circle } from 'react-native-svg'
-
+import {BleAPI, ensurePermissions, subscribeToBleEvents} from "@/services/bleService";
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { typography } from '@/constants/theme'
 import { useThemeColor } from '@/hooks/use-theme-color'
-import { bleService } from '@/services/BLEService'
+import {getWeather} from "@/services/weatherService";
 
 const CIRCUMFERENCE = 2 * Math.PI * 45
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
+
 function formatTime(date: Date | null): string {
 	if (date == null) {
 		return '--:--'
@@ -22,6 +23,7 @@ function formatTime(date: Date | null): string {
 
 	return `${hours}:${minutes}`
 }
+
 function PulsingDot({ color }: { color: string }) {
 	const opacity = useRef(new Animated.Value(1)).current
 
@@ -42,7 +44,7 @@ function PulsingDot({ color }: { color: string }) {
 		)
 		loop.start()
 		return () => loop.stop()
-	}, [])
+	}, [opacity])
 
 	return (
 		<Animated.View style={{ opacity }}>
@@ -52,11 +54,11 @@ function PulsingDot({ color }: { color: string }) {
 }
 
 function SettingsRow({
-	icon,
-	label,
-	children,
-	delay = 0,
-}: {
+						 icon,
+						 label,
+						 children,
+						 delay = 0,
+					 }: {
 	icon: keyof typeof MaterialIcons.glyphMap
 	label: string
 	children: React.ReactNode
@@ -99,13 +101,13 @@ export default function HomeScreen() {
 	const errorColor = useThemeColor({}, 'error')
 
 	const [brightness, setBrightness] = useState(60)
-	const [isConnected, setIsConnected] = useState(
-		bleService.connectionState === 'connected',
-	)
-	const [batteryPercentage, setBatteryPercentage] = useState(
-		bleService.batteryPercentage,
-	)
-	const [lastSynced, setLastSynced] = useState(bleService.lastTimeSynced)
+	const [isConnected, setIsConnected] = useState(false)
+	const [isConnecting, setIsConnecting] = useState(false)
+	const [batteryPercentage, setBatteryPercentage] = useState<number | typeof NaN>(NaN)
+	const [lastSynced, setLastSynced] = useState<Date | null>(null)
+	const hasAttemptedAutoConnect = useRef(false)
+
+
 
 	const targetOffset =
 		CIRCUMFERENCE *
@@ -114,37 +116,102 @@ export default function HomeScreen() {
 	const animOffset = useRef(new Animated.Value(CIRCUMFERENCE)).current
 
 	useEffect(() => {
+		if (!isConnected) return;
+		const id = setTimeout(() => {
+			BleAPI.sendBrightness(brightness).catch(console.error);
+		}, 500);
+		return () => clearTimeout(id);
+	}, [brightness, isConnected]);
+
+	const connectDevice = useCallback(async () => {
+		if (isConnecting || isConnected) return
+
+		setIsConnecting(true)
+		try {
+			if (!(await ensurePermissions())) {
+				Alert.alert(
+					'Bluetooth permission required',
+					'Allow Bluetooth permission in your device settings, then tap Reconnect.',
+				)
+				return
+			}
+
+			await BleAPI.startScanAndConnect()
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : String(error)
+			const code = typeof error === 'object' && error != null && 'code' in error
+				? error.code
+				: undefined
+
+			if (code === 'CONNECTION_TIMEOUT') {
+				return
+			}
+
+			if (code === 'BLUETOOTH_DISABLED' || message.includes('Bluetooth is disabled or unavailable')) {
+				Alert.alert(
+					'Bluetooth is turned off',
+					'Turn on Bluetooth, then tap Reconnect to find your Round Display.',
+				)
+			} else if (code !== 'ALREADY_CONNECTED') {
+				Alert.alert('Unable to connect', 'Could not connect to your Round Display. Please try again.')
+			}
+		} finally {
+			setIsConnecting(false)
+		}
+	}, [isConnected, isConnecting])
+
+	useEffect(() => {
+		if (hasAttemptedAutoConnect.current) return
+		hasAttemptedAutoConnect.current = true
+		void connectDevice()
+	}, [connectDevice])
+	useEffect(() => {
 		Animated.timing(animOffset, {
 			toValue: targetOffset,
 			duration: 1400,
 			useNativeDriver: true,
 		}).start()
-	}, [targetOffset])
+	}, [targetOffset, animOffset])
+
 	useEffect(() => {
-		const timer = setTimeout(() => {
-			console.log(`sending brightness: ${brightness}`)
-			bleService.send(`brightness:${brightness}`).catch(() => {})
-		}, 400)
-		return () => clearTimeout(timer)
-	}, [brightness])
-	useEffect(() => {
-		const unsub = bleService.onEvent(async event => {
-			if (event.type === 'connectionStateChange') {
-				setIsConnected(event.state === 'connected')
-				setLastSynced(bleService.lastTimeSynced)
-			}
-			if (
-				event.type === 'connectionStateChange' ||
-				('payload' in event &&
-					typeof event.payload === 'string' &&
-					event.payload.startsWith('battery:'))
-			) {
-				setBatteryPercentage(bleService.batteryPercentage)
-				setLastSynced(bleService.lastTimeSynced)
-			}
-		})
-		return unsub
-	}, [])
+		const syncDeviceData = async () => {
+			setLastSynced(new Date());
+			const weather = await getWeather("Gdansk");
+			await BleAPI.sendWeather(weather);
+		};
+
+		const unsubscribe = subscribeToBleEvents({
+			onConnectionChange: (status) => {
+				switch (status) {
+					case "disconnected":
+						setIsConnected(false);
+						console.log("device disconnected");
+						break;
+					case "connected":
+						setIsConnected(true);
+						console.log("device connected");
+						setLastSynced(new Date());
+
+						setTimeout(async () =>{ await BleAPI.sendTime(new Date().toISOString())}, 2000); // delay to give ble time to connect
+						break;
+				}
+			},
+			onBatteryUpdate: (batteryLevel) => {
+				setBatteryPercentage(batteryLevel);
+			},
+			onWeatherRequested: () => {
+				syncDeviceData();
+			},
+			onPongReceived: () => {
+				// обработчик pong
+			},
+		});
+
+		return () => {
+			unsubscribe();
+		};
+	}, []);
+
 
 	return (
 		<ThemedView style={styles.root}>
@@ -194,7 +261,14 @@ export default function HomeScreen() {
 							<Text style={{ fontSize: 24, letterSpacing: 0 }}>%</Text>
 						</ThemedText>
 
-						<ThemedView
+						<Pressable
+							disabled={isConnected || isConnecting}
+							onPress={() => void connectDevice()}
+							accessibilityRole='button'
+							accessibilityLabel={
+								isConnected ? 'Round Display connected' : 'Reconnect to Round Display'
+							}>
+							<ThemedView
 							lightColor={
 								isConnected
 									? 'rgba(212, 232, 212, 0.5)'
@@ -212,9 +286,10 @@ export default function HomeScreen() {
 									fontSize: typography.label.fontSize,
 									fontFamily: typography.label.fontFamily,
 								}}>
-								{isConnected ? 'connected' : 'disconnected'}
+								{isConnected ? 'connected' : isConnecting ? 'connecting' : 'reconnect'}
 							</ThemedText>
-						</ThemedView>
+							</ThemedView>
+						</Pressable>
 					</ThemedView>
 				</AnimatedReanimated.View>
 			</ThemedView>
