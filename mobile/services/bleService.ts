@@ -21,6 +21,7 @@ export type BleErrorDetails = {
 
 type NativeBleModule = {
 	startScanAndConnect(): Promise<boolean>
+	autoConnect(): Promise<boolean>
 	disconnect(): Promise<boolean>
 	sendTime(time: string): Promise<boolean>
 	sendWeather(weather: string): Promise<boolean>
@@ -29,6 +30,7 @@ type NativeBleModule = {
 	getConnectionState(): Promise<BleConnectionStatus>
 	addListener(eventName: string): void
 	removeListeners(count: number): void
+
 }
 
 type ConnectionStateEvent = { status: BleConnectionStatus }
@@ -112,7 +114,7 @@ export const ensurePermissions = ensureBlePermissions
 
 
 export const BleAPI = {
-	startScanAndConnect: (timeoutMs: number = 15_000, showAlert: boolean = true): Promise<boolean> => {
+	tryToConnect: (timeoutMs: number = 15_000, showAlert: boolean = true): Promise<boolean> => {
 		return new Promise<boolean>((resolve, reject) => {
 			let isSettled = false
 
@@ -153,6 +155,8 @@ export const BleAPI = {
 				})
 		})
 	},
+	connect:(): Promise<boolean> => getNativeBleModule()
+		.startScanAndConnect(),
 	disconnect: (): Promise<boolean> => getNativeBleModule().disconnect(),
 	getConnectionState: (): Promise<BleConnectionStatus> =>
 		getNativeBleModule().getConnectionState(),
@@ -170,6 +174,7 @@ export const BleAPI = {
 		}
 		return getNativeBleModule().sendBrightness(brightness)
 	},
+	autoConnect: (): Promise<boolean> => getNativeBleModule().autoConnect(),
 	sendPing: (): Promise<boolean> => getNativeBleModule().sendPing(),
 }
 

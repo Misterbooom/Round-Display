@@ -67,8 +67,7 @@ namespace SettingsScreen
 
         static auto systemItems = SettingsRenderer::makeItems(
             SettingsRenderer::makeSlider("Battery Refresh", 1, 60, Config::data.batteryUpdateMin, "min", Callbacks::batteryUpdateRate_cb),
-            SettingsRenderer::makeAction("Restart Display",Callbacks::restartDisplay_cb )
-        );
+            SettingsRenderer::makeAction("Restart Display", Callbacks::restartDisplay_cb));
         static auto systemPage = SettingsRenderer::makePage("System", systemItems);
 
         static auto displayItems = SettingsRenderer::makeItems(

@@ -172,7 +172,7 @@ void setup()
   screensInit();
   TouchScreen::onSwipeLeft = nextScreen;
   TouchScreen::onSwipeRight = previousScreen;
-  Ble::onWeatherReceive = WeatherScreen::updateWeather;
+  Ble::setWeatherCallback(WeatherScreen::updateWeather);
 }
 
 // ╔════════════════════════════════════════════════════════════════════════════╗

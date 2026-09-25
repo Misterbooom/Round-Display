@@ -136,8 +136,15 @@ export default function HomeScreen() {
 				return
 			}
 
-			await BleAPI.startScanAndConnect()
-		} catch (error: unknown) {
+			try {
+				console.log("Trying background hardware auto-connect...");
+				await BleAPI.autoConnect();
+			} catch (error) {
+				console.log("aNo saved MAC or error, falling back to scanner...");
+				await BleAPI.tryToConnect(15000, true);
+			}
+		}
+		 catch (error: unknown) {
 			const message = error instanceof Error ? error.message : String(error)
 			const code = typeof error === 'object' && error != null && 'code' in error
 				? error.code
@@ -181,18 +188,21 @@ export default function HomeScreen() {
 		};
 
 		const unsubscribe = subscribeToBleEvents({
-			onConnectionChange: (status) => {
+			onConnectionChange: async (status) => {
 				switch (status) {
 					case "disconnected":
 						setIsConnected(false);
-						console.log("device disconnected");
+						console.log("device disconnected.");
+
+						// await BleAPI.connect();
+
 						break;
 					case "connected":
 						setIsConnected(true);
 						console.log("device connected");
 						setLastSynced(new Date());
 
-						setTimeout(async () =>{ await BleAPI.sendTime(new Date().toISOString())}, 2000); // delay to give ble time to connect
+						setTimeout(async () =>{ await BleAPI.sendTime(new Date().toISOString()); }, 2000); // delay to give ble time to connect
 						break;
 				}
 			},
@@ -202,9 +212,7 @@ export default function HomeScreen() {
 			onWeatherRequested: () => {
 				syncDeviceData();
 			},
-			onPongReceived: () => {
-				// обработчик pong
-			},
+
 		});
 
 		return () => {

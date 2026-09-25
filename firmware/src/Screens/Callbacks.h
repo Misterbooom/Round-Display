@@ -46,7 +46,7 @@ namespace Callbacks
     Config::data.weatherUpdateMin =
         static_cast<uint16_t>(sliderValue(event));
     Config::save();
-    Ble::resetWeatherRequestTimer();
+    Ble::requestWeather();
     Serial.printf("[Settings] Weather refresh: %u min\n",
                   Config::data.weatherUpdateMin);
   }

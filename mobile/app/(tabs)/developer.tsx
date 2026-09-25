@@ -66,8 +66,6 @@ export default function DeveloperScreen() {
 
 	return (
 		<ScrollView style={styles.root} contentContainerStyle={styles.content}>
-			<ThemedText type="title" style={styles.title}>Developer Tools</ThemedText>
-			
 			<ActionButton icon="network-check" label={`Check State (Current: ${status})`} onPress={checkConnection} />
 			<ActionButton icon="sensors" label="Send Ping" onPress={sendPing} />
 			<ActionButton icon="access-time" label="Send Current Time" onPress={sendTestTime} />
