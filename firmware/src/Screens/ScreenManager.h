@@ -17,6 +17,7 @@ enum Screen : uint8_t
 {
   SCREEN_CLOCK,
   SCREEN_WEATHER,
+  SCREEN_PCSTATS,
   SCREEN_SETTINGS,
   SCREEN_COUNT
 };
@@ -39,7 +40,11 @@ namespace SettingsScreen
   lv_obj_t *create();
   void update();
 }
-
+namespace PcStatsScreen
+{
+  lv_obj_t *create();
+  void update();
+}
 void screensInit();
 void makeStatic(lv_obj_t *obj);
 void screensSwitch(Screen s, bool forward = true);

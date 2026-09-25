@@ -22,7 +22,9 @@ export async function getWeather(city: string): Promise<string> {
     const weatherRes = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&wind_speed_unit=kmh&timezone=auto`
     )
-
+    if (weatherRes.status === 503) {
+        return; // if too many requests just ignore
+    }
     if (!weatherRes.ok) {
         throw new Error(`Weather API error: ${weatherRes.status}`)
     }

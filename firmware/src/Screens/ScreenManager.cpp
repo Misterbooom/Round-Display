@@ -18,6 +18,7 @@ void screensInit()
   _screens[SCREEN_CLOCK] = ClockScreen::create();
   _screens[SCREEN_WEATHER] = WeatherScreen::create();
   _screens[SCREEN_SETTINGS] = SettingsScreen::create();
+  _screens[SCREEN_PCSTATS] = PcStatsScreen::create();
 
   for (int i = 0; i < SCREEN_COUNT; i++)
   {
@@ -105,7 +106,9 @@ void screensLoop()
   case SCREEN_SETTINGS:
     SettingsScreen::update();
     break;
-
+  case SCREEN_PCSTATS:
+    PcStatsScreen::update();
+    break;
   default:
     break;
   }
