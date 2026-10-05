@@ -170,7 +170,39 @@ export default function HomeScreen() {
 	useEffect(() => {
 		if (hasAttemptedAutoConnect.current) return
 		hasAttemptedAutoConnect.current = true
-		void connectDevice()
+
+		const init = async () => {
+			try {
+				const snapshot = await BleAPI.getSnapshot()
+				if (snapshot.batteryLevel != null && !isNaN(snapshot.batteryLevel)) {
+					setBatteryPercentage(snapshot.batteryLevel)
+				}
+
+				if (snapshot.status === 'connected') {
+					setIsConnected(true)
+					setIsConnecting(false)
+					setLastSynced(new Date())
+					return
+				}
+
+				if (
+					snapshot.status === 'connecting' ||
+					snapshot.status === 'scanning' ||
+					snapshot.status === 'reconnecting'
+				) {
+					setIsConnecting(true)
+					setIsConnected(false)
+					return
+				}
+
+				void connectDevice()
+			} catch (e) {
+				console.log('Error reading BLE snapshot on mount:', e)
+				void connectDevice()
+			}
+		}
+
+		void init()
 	}, [connectDevice])
 	useEffect(() => {
 		Animated.timing(animOffset, {
@@ -182,43 +214,51 @@ export default function HomeScreen() {
 
 	useEffect(() => {
 		const syncDeviceData = async () => {
-			setLastSynced(new Date());
-			const weather = await getWeather("Gdansk");
-			await BleAPI.sendWeather(weather);
-		};
+			setLastSynced(new Date())
+			const weather = await getWeather('Gdansk')
+			await BleAPI.sendWeather(weather)
+		}
 
 		const unsubscribe = subscribeToBleEvents({
 			onConnectionChange: async (status) => {
 				switch (status) {
-					case "disconnected":
-						setIsConnected(false);
-						console.log("device disconnected.");
-
-						// await BleAPI.connect();
-
-						break;
-					case "connected":
-						setIsConnected(true);
-						console.log("device connected");
-						setLastSynced(new Date());
-
-						setTimeout(async () =>{ await BleAPI.sendTime(new Date().toISOString()); }, 2000); // delay to give ble time to connect
-						break;
+					case 'disconnected':
+						setIsConnected(false)
+						setIsConnecting(false)
+						console.log('device disconnected.')
+						break
+					case 'scanning':
+					case 'connecting':
+					case 'reconnecting':
+						setIsConnected(false)
+						setIsConnecting(true)
+						console.log(`device ${status}...`)
+						break
+					case 'connected':
+						setIsConnected(true)
+						setIsConnecting(false)
+						console.log('device connected')
+						setLastSynced(new Date())
+						BleAPI.getSnapshot().then(s => {
+							if (s.batteryLevel != null && !isNaN(s.batteryLevel)) {
+								setBatteryPercentage(s.batteryLevel)
+							}
+						}).catch(console.error)
+						break
 				}
 			},
 			onBatteryUpdate: (batteryLevel) => {
-				setBatteryPercentage(batteryLevel);
+				setBatteryPercentage(batteryLevel)
 			},
 			onWeatherRequested: () => {
-				syncDeviceData();
+				syncDeviceData()
 			},
-
-		});
+		})
 
 		return () => {
-			unsubscribe();
-		};
-	}, []);
+			unsubscribe()
+		}
+	}, [])
 
 
 	return (

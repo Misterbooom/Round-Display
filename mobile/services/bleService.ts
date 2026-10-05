@@ -6,13 +6,21 @@ import {
 	PermissionsAndroid,
 	Platform,
 } from 'react-native'
-import BackgroundService from 'react-native-background-actions'
 
 export type BleConnectionStatus =
 	| 'disconnected'
 	| 'scanning'
 	| 'connecting'
 	| 'connected'
+	| 'reconnecting'
+
+export type BleSnapshot = {
+	status: BleConnectionStatus
+	batteryLevel: number | null
+	weatherRequestPending: boolean
+	sessionActive: boolean
+	serviceRunning: boolean
+}
 
 export type BleErrorDetails = {
 	code?: string
@@ -28,9 +36,16 @@ type NativeBleModule = {
 	sendBrightness(brightness: number): Promise<boolean>
 	sendPing(): Promise<boolean>
 	getConnectionState(): Promise<BleConnectionStatus>
+	getSnapshot(): Promise<BleSnapshot>
+	startService(): Promise<boolean>
+	stopService(): Promise<boolean>
+	isServiceRunning(): Promise<boolean>
+	isIgnoringBatteryOptimizations(): Promise<boolean>
+	requestIgnoreBatteryOptimizations(): Promise<boolean>
+	setCity(city: string): Promise<boolean>
+	getCity(): Promise<string>
 	addListener(eventName: string): void
 	removeListeners(count: number): void
-
 }
 
 type ConnectionStateEvent = { status: BleConnectionStatus }
@@ -43,6 +58,7 @@ export type BleEventHandlers = {
 	onWeatherRequested?: () => void
 	onPongReceived?: () => void
 	onCustomNotification?: (message: string) => void
+	onKotlinLog?: (message: string) => void
 }
 
 const nativeBleModule = NativeModules.BleService as NativeBleModule | undefined
@@ -50,9 +66,13 @@ const nativeBleModule = NativeModules.BleService as NativeBleModule | undefined
 const bleEventEmitter = nativeBleModule
 	? new NativeEventEmitter(nativeBleModule)
 	: null
-bleEventEmitter.addListener('onKotlinLog', (message) => {
-	console.log('Native Log:', message);
-});
+
+if (bleEventEmitter) {
+	bleEventEmitter.addListener('onKotlinLog', (message: string) => {
+		console.log('Native BLE Log:', message)
+	})
+}
+
 function unavailableError(): Error {
 	const error = new Error('Bluetooth is unavailable in this build.')
 	Object.assign(error, { code: 'BLE_UNAVAILABLE' })
@@ -70,9 +90,10 @@ function rejectInvalidArgument(message: string): Promise<never> {
 
 export function getBleErrorDetails(error: unknown): BleErrorDetails {
 	if (error instanceof Error) {
-		const code = typeof (error as Error & { code?: unknown }).code === 'string'
-			? (error as Error & { code: string }).code
-			: undefined
+		const code =
+			typeof (error as Error & { code?: unknown }).code === 'string'
+				? (error as Error & { code: string }).code
+				: undefined
 		return { code, message: error.message }
 	}
 
@@ -80,28 +101,50 @@ export function getBleErrorDetails(error: unknown): BleErrorDetails {
 		const value = error as { code?: unknown; message?: unknown }
 		return {
 			code: typeof value.code === 'string' ? value.code : undefined,
-			message: typeof value.message === 'string' ? value.message : 'Bluetooth request failed.',
+			message:
+				typeof value.message === 'string'
+					? value.message
+					: 'Bluetooth request failed.',
 		}
 	}
 
 	return { message: typeof error === 'string' ? error : 'Bluetooth request failed.' }
 }
 
+export type PermissionCheckResult = {
+	bluetoothGranted: boolean
+	notificationsGranted: boolean
+}
+
+/**
+ * Request all permissions required for Android 12+ (API 31+) & Android 13+ (API 33+).
+ * Bluetooth scan & connect permissions are mandatory. Notification permission is recommended
+ * so the ongoing foreground service status notification is visible to the user.
+ */
 export async function ensureBlePermissions(): Promise<boolean> {
 	if (Platform.OS !== 'android') return true
 
-	if (Number(Platform.Version) >= 31) {
-		const statuses = await PermissionsAndroid.requestMultiple([
+	const apiLevel = Number(Platform.Version)
+
+	if (apiLevel >= 31) {
+		const permissionsToRequest = [
 			PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
 			PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-		])
+		]
 
-		return (
+		if (apiLevel >= 33) {
+			permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+		}
+
+		const statuses = await PermissionsAndroid.requestMultiple(permissionsToRequest)
+
+		const bluetoothGranted =
 			statuses[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] ===
 				PermissionsAndroid.RESULTS.GRANTED &&
 			statuses[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] ===
 				PermissionsAndroid.RESULTS.GRANTED
-		)
+
+		return bluetoothGranted
 	}
 
 	const status = await PermissionsAndroid.request(
@@ -112,9 +155,11 @@ export async function ensureBlePermissions(): Promise<boolean> {
 
 export const ensurePermissions = ensureBlePermissions
 
-
 export const BleAPI = {
-	tryToConnect: (timeoutMs: number = 15_000, showAlert: boolean = true): Promise<boolean> => {
+	tryToConnect: (
+		timeoutMs: number = 15_000,
+		showAlert: boolean = true,
+	): Promise<boolean> => {
 		return new Promise<boolean>((resolve, reject) => {
 			let isSettled = false
 
@@ -125,6 +170,7 @@ export const BleAPI = {
 				try {
 					await getNativeBleModule().disconnect()
 				} catch {
+					// Ignore disconnect failure on timeout cleanup
 				}
 
 				if (showAlert) {
@@ -155,11 +201,22 @@ export const BleAPI = {
 				})
 		})
 	},
-	connect:(): Promise<boolean> => getNativeBleModule()
-		.startScanAndConnect(),
+	connect: (): Promise<boolean> => getNativeBleModule().startScanAndConnect(),
+	autoConnect: (): Promise<boolean> => getNativeBleModule().autoConnect(),
 	disconnect: (): Promise<boolean> => getNativeBleModule().disconnect(),
 	getConnectionState: (): Promise<BleConnectionStatus> =>
 		getNativeBleModule().getConnectionState(),
+	getSnapshot: (): Promise<BleSnapshot> => getNativeBleModule().getSnapshot(),
+
+	startService: (): Promise<boolean> => getNativeBleModule().startService(),
+	stopService: (): Promise<boolean> => getNativeBleModule().stopService(),
+	isServiceRunning: (): Promise<boolean> => getNativeBleModule().isServiceRunning(),
+
+	isIgnoringBatteryOptimizations: (): Promise<boolean> =>
+		getNativeBleModule().isIgnoringBatteryOptimizations(),
+	requestIgnoreBatteryOptimizations: (): Promise<boolean> =>
+		getNativeBleModule().requestIgnoreBatteryOptimizations(),
+
 	sendTime: (time: string): Promise<boolean> => {
 		if (!time.trim()) return rejectInvalidArgument('Time cannot be empty.')
 		return getNativeBleModule().sendTime(time)
@@ -172,10 +229,16 @@ export const BleAPI = {
 		if (!Number.isInteger(brightness) || brightness < 0 || brightness > 100) {
 			return rejectInvalidArgument('Brightness must be an integer between 0 and 100.')
 		}
-		return getNativeBleModule().sendBrightness(brightness)
+		// Firmware brightness is 0-255; UI uses 0-100%
+		const scaled = Math.round((brightness / 100) * 255)
+		return getNativeBleModule().sendBrightness(scaled)
 	},
-	autoConnect: (): Promise<boolean> => getNativeBleModule().autoConnect(),
 	sendPing: (): Promise<boolean> => getNativeBleModule().sendPing(),
+	setCity: (city: string): Promise<boolean> => {
+		if (!city.trim()) return rejectInvalidArgument('City cannot be empty.')
+		return getNativeBleModule().setCity(city.trim())
+	},
+	getCity: (): Promise<string> => getNativeBleModule().getCity(),
 }
 
 export function subscribeToBleEvents(handlers: BleEventHandlers): () => void {
@@ -212,7 +275,15 @@ export function subscribeToBleEvents(handlers: BleEventHandlers): () => void {
 		subscriptions.push(
 			bleEventEmitter.addListener(
 				'onCustomNotification',
-				(event: CustomNotificationEvent) => handlers.onCustomNotification?.(event.raw),
+				(event: CustomNotificationEvent) =>
+					handlers.onCustomNotification?.(event.raw),
+			),
+		)
+	}
+	if (handlers.onKotlinLog) {
+		subscriptions.push(
+			bleEventEmitter.addListener('onKotlinLog', (message: string) =>
+				handlers.onKotlinLog?.(message),
 			),
 		)
 	}
@@ -220,42 +291,18 @@ export function subscribeToBleEvents(handlers: BleEventHandlers): () => void {
 	return () => subscriptions.forEach(subscription => subscription.remove())
 }
 
-const sleep = (time: number) => new Promise<void>(resolve => setTimeout(resolve, time))
-
-type BackgroundTaskParameters = { delay: number }
-
-const backgroundSyncTask = async ({ delay }: BackgroundTaskParameters) => {
-	while (BackgroundService.isRunning()) {
-		await sleep(delay)
-	}
-}
-
-const backgroundOptions = {
-	taskName: 'RoundDisplaySync',
-	taskTitle: 'Round Display Connected',
-	taskDesc: 'Keeping the Round Display connection available',
-	taskIcon: {
-		name: 'ic_launcher',
-		type: 'mipmap',
-	},
-	color: '#000000',
-	parameters: {
-		delay: 60_000,
-	},
-}
+// ------------------------------------------------------------------------
+// Compatibility wrappers (migrated from legacy react-native-background-actions)
+// ------------------------------------------------------------------------
 
 export async function startBackgroundSync(): Promise<void> {
-	if (!BackgroundService.isRunning()) {
-		await BackgroundService.start(backgroundSyncTask, backgroundOptions)
-	}
+	await BleAPI.startService()
 }
 
 export async function stopBackgroundSync(): Promise<void> {
-	if (BackgroundService.isRunning()) {
-		await BackgroundService.stop()
-	}
+	await BleAPI.stopService()
 }
 
-export function isBackgroundSyncRunning(): boolean {
-	return BackgroundService.isRunning()
+export function isBackgroundSyncRunning(): Promise<boolean> {
+	return BleAPI.isServiceRunning()
 }
