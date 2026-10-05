@@ -44,6 +44,8 @@ namespace PcStatsScreen
 {
   lv_obj_t *create();
   void update();
+  void setCpuTelemetry(float load, float temperature);
+  void setGpuTelemetry(float load, float temperature);
 }
 void screensInit();
 void makeStatic(lv_obj_t *obj);

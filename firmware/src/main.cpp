@@ -15,6 +15,7 @@
 #include "TouchScreen.h"
 #include "BLE.h"
 #include "Config.h"
+#include "PcSerialHandler.h"
 // ╔════════════════════════════════════════════════════════════════════════════╗
 // ║  DISPLAY FLUSH — LVGL calls this when it needs to send pixels to screen   ║
 // ╚════════════════════════════════════════════════════════════════════════════╝
@@ -184,6 +185,7 @@ void loop()
   lv_timer_handler();
   screensLoop();
   Ble::update();
+  PcSerialHandler::update();
   updateBacklight();
   Utils::applyPendingDate();
   delay(1);

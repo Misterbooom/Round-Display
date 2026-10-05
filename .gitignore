@@ -47,3 +47,6 @@ example
 # generated native folders
 /ios
 /android
+bin/
+.idea/
+obj/
