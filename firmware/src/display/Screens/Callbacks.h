@@ -3,8 +3,8 @@
 #include <Arduino.h>
 #include <lvgl.h>
 
-#include "BLE.h"
-#include "Config.h"
+#include "../BLE.h"
+#include "../Config.h"
 #include "ScreenManager.h"
 
 namespace Callbacks
@@ -37,6 +37,7 @@ namespace Callbacks
     Config::data.useCelsius = !isChecked(event);
     Config::save();
     WeatherScreen::refresh();
+    RoomScreen::refresh();
     Serial.printf("[Settings] Temperature unit: %s\n",
                   Config::data.useCelsius ? "C" : "F");
   }
@@ -54,6 +55,21 @@ namespace Callbacks
   inline void refreshWeather_cb(lv_event_t *)
   {
     Ble::requestWeather();
+  }
+
+  inline void roomRefreshRate_cb(lv_event_t *event)
+  {
+    Config::data.roomUpdateMin =
+        static_cast<uint16_t>(sliderValue(event));
+    Config::save();
+    Ble::requestRoom();
+    Serial.printf("[Settings] Room refresh: %u min\n",
+                  Config::data.roomUpdateMin);
+  }
+
+  inline void refreshRoom_cb(lv_event_t *)
+  {
+    Ble::requestRoom();
   }
 
   inline void brightness_cb(lv_event_t *event)
@@ -79,7 +95,13 @@ namespace Callbacks
     Serial.printf("[Settings] Screen timeout: %u s\n",
                   Config::data.timeoutSec);
   }
-
+  inline void showSeconds_cb(lv_event_t *event)
+  {
+    Config::data.showSeconds = isChecked(event);
+    Config::save();
+    Serial.printf("[Settings] Show seconds: %s s\n",
+                  isChecked(event) ? "enabled" : "disabled");
+  }
   inline void alwaysOn_cb(lv_event_t *event)
   {
     static uint16_t previousTimeoutSec = 30;

@@ -3,7 +3,7 @@
 #include <time.h>
 #include "utils.h"
 #include "RTClib.h"
-#include "Config.h"
+#include "../Config.h"
 
 namespace ClockScreen
 {

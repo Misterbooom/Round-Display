@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include <cmath>
-#include "Config.h"
+#include "../Config.h"
 
 namespace PcStatsScreen
 {

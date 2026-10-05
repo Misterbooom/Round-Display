@@ -3,7 +3,7 @@
 #include <lvgl.h>
 #include "ScreenManager.h"
 #include "SettingsRenderer.h"
-#include "Config.h"
+#include "../Config.h"
 #include "Callbacks.h"
 namespace SettingsScreen
 {
@@ -50,7 +50,8 @@ namespace SettingsScreen
         createTitle(scr, "SETTINGS");
 
         static auto clockItems = SettingsRenderer::makeItems(
-            SettingsRenderer::makeSwitch("Time format", "12 H", "24 H", Config::data.use24Hour, Callbacks::timeFormat_cb));
+            SettingsRenderer::makeSwitch("Time format", "12 H", "24 H", Config::data.use24Hour, Callbacks::timeFormat_cb),
+            SettingsRenderer::makeSwitch("Show seconds", "On", "Off", Config::data.showSeconds, Callbacks::showSeconds_cb));
         static auto clockPage = SettingsRenderer::makePage("Clock", clockItems);
 
         static auto weatherItems = SettingsRenderer::makeItems(
@@ -58,6 +59,11 @@ namespace SettingsScreen
             SettingsRenderer::makeSlider("Refresh rate", 5, 60, Config::data.weatherUpdateMin, "min", Callbacks::weatherRefreshRate_cb),
             SettingsRenderer::makeAction("Refresh now", Callbacks::refreshWeather_cb));
         static auto weatherPage = SettingsRenderer::makePage("Weather", weatherItems);
+
+        static auto roomItems = SettingsRenderer::makeItems(
+            SettingsRenderer::makeSlider("Refresh rate", 1, 60, Config::data.roomUpdateMin, "min", Callbacks::roomRefreshRate_cb),
+            SettingsRenderer::makeAction("Refresh now", Callbacks::refreshRoom_cb));
+        static auto roomPage = SettingsRenderer::makePage("Room", roomItems);
 
         static auto timeoutItems = SettingsRenderer::makeItems(
             SettingsRenderer::makeSlider("Brightness", 10, 100, Config::data.brightness, "%", Callbacks::brightness_cb),
@@ -73,6 +79,7 @@ namespace SettingsScreen
         static auto displayItems = SettingsRenderer::makeItems(
             SettingsRenderer::makeTab("Clock", clockPage),
             SettingsRenderer::makeTab("Weather", weatherPage),
+            SettingsRenderer::makeTab("Room", roomPage),
             SettingsRenderer::makeTab("Screen", timeoutPage),
             SettingsRenderer::makeTab("System", systemPage));
         static auto startPage = SettingsRenderer::makePage("Settings", displayItems);

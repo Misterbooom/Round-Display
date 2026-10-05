@@ -17,6 +17,7 @@ enum Screen : uint8_t
 {
   SCREEN_CLOCK,
   SCREEN_WEATHER,
+  SCREEN_ROOM,
   SCREEN_PCSTATS,
   SCREEN_SETTINGS,
   SCREEN_COUNT
@@ -33,6 +34,14 @@ namespace WeatherScreen
   void update();
   void refresh();
   bool updateWeather(const char *json);
+}
+
+namespace RoomScreen
+{
+  lv_obj_t *create();
+  void update();
+  void refresh();
+  bool updateRoom(const char *json);
 }
 
 namespace SettingsScreen

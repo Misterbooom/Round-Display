@@ -7,7 +7,7 @@
 #include <string>
 #include <utils.h>
 #include "Config.h"
-
+#include <set>
 namespace Ble
 {
   namespace
@@ -22,6 +22,7 @@ namespace Ble
     constexpr size_t CMD_MAX_SIZE = 512;
     constexpr uint32_t INITIAL_SYNC_DELAY_MS = 2000UL;
     constexpr uint32_t WEATHER_RETRY_DELAY_MS = 5000UL;
+    constexpr uint32_t ROOM_RETRY_DELAY_MS = 5000UL;
 
     struct CommandMsg
     {
@@ -32,14 +33,17 @@ namespace Ble
     NimBLECharacteristic *txCharacteristic = nullptr;
     QueueHandle_t commandQueue = nullptr;
     WeatherCallback onWeatherReceive = nullptr;
+    RoomCallback onRoomReceive = nullptr;
 
-    std::atomic<bool> clientSubscribed{false};
+    std::set<uint16_t> activeSubscribers;
     std::atomic<bool> pendingInitialSync{false};
     std::atomic<uint32_t> syncDelayStartMs{0};
 
     uint32_t lastWeatherRequestMs = 0;
     uint32_t lastBatterySendMs = 0;
     uint32_t weatherRetryAtMs = 0;
+    uint32_t lastRoomRequestMs = 0;
+    uint32_t roomRetryAtMs = 0;
 
     bool sendNotification(const char *data)
     {
@@ -67,6 +71,15 @@ namespace Ble
         if (onWeatherReceive)
         {
           onWeatherReceive(json);
+        }
+      }
+      else if (command.startsWith("ROOM:"))
+      {
+        const char *json = command.c_str() + 5;
+        Serial.printf("Room: %s\n", json);
+        if (onRoomReceive)
+        {
+          onRoomReceive(json);
         }
       }
       else if (command == "PING")
@@ -107,18 +120,19 @@ namespace Ble
     public:
       void onSubscribe(NimBLECharacteristic *characteristic, NimBLEConnInfo &connInfo, uint16_t subValue) override
       {
+        uint16_t connHandle = connInfo.getConnHandle();
+
         if (subValue & 0x01)
         {
+          activeSubscribers.insert(connHandle);
           syncDelayStartMs.store(millis());
           pendingInitialSync.store(true);
-          clientSubscribed.store(true);
-          Serial.println("[BLE] Client subscribed to TX");
+          Serial.printf("[BLE] Client %d subscribed to TX\n", connHandle);
         }
         else
         {
-          clientSubscribed.store(false);
-          pendingInitialSync.store(false);
-          Serial.println("[BLE] Client unsubscribed from TX");
+          activeSubscribers.erase(connHandle);
+          Serial.printf("[BLE] Client %d unsubscribed from TX\n", connHandle);
         }
       }
     };
@@ -128,17 +142,20 @@ namespace Ble
     public:
       void onConnect(NimBLEServer *srv, NimBLEConnInfo &connInfo) override
       {
-        Serial.println("[BLE] Device connected");
+        Serial.printf("[BLE] Device connected (total: %d)\n", srv->getConnectedCount());
+
+        srv->updateConnParams(connInfo.getConnHandle(), 24, 48, 0, 400);
       }
 
       void onDisconnect(NimBLEServer *srv, NimBLEConnInfo &connInfo, int reason) override
       {
-        if (srv->getConnectedCount() == 0)
+        activeSubscribers.erase(connInfo.getConnHandle());
+
+        if (activeSubscribers.empty())
         {
-          clientSubscribed.store(false);
           pendingInitialSync.store(false);
         }
-        Serial.println("[BLE] Device disconnected");
+        Serial.printf("[BLE] Device disconnected (remaining: %d), reason: %d\n", srv->getConnectedCount(), reason);
       }
     };
 
@@ -152,11 +169,15 @@ namespace Ble
     onWeatherReceive = cb;
   }
 
-  bool isConnected()
+  void setRoomCallback(RoomCallback cb)
   {
-    return server != nullptr && server->getConnectedCount() > 0 && clientSubscribed.load();
+    onRoomReceive = cb;
   }
 
+  bool isConnected()
+  {
+    return server != nullptr && !activeSubscribers.empty();
+  }
   bool requestWeather()
   {
     if (!isConnected())
@@ -173,6 +194,25 @@ namespace Ble
     }
 
     Serial.printf("[BLE] Weather request: %s\n", sent ? "sent" : "failed");
+    return sent;
+  }
+
+  bool requestRoom()
+  {
+    if (!isConnected())
+    {
+      Serial.println("[BLE] Room request skipped: client not ready");
+      return false;
+    }
+
+    bool sent = sendNotification("REFRESH_ROOM");
+    if (sent)
+    {
+      lastRoomRequestMs = millis();
+      roomRetryAtMs = 0;
+    }
+
+    Serial.printf("[BLE] Room request: %s\n", sent ? "sent" : "failed");
     return sent;
   }
 
@@ -207,6 +247,15 @@ namespace Ble
       }
     }
 
+    if (server != nullptr && server->getConnectedCount() < CONFIG_BT_NIMBLE_MAX_CONNECTIONS)
+    {
+      NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+      if (adv != nullptr && !adv->isAdvertising())
+      {
+        adv->start();
+      }
+    }
+
     if (!isConnected())
     {
       return;
@@ -227,6 +276,11 @@ namespace Ble
         {
           weatherRetryAtMs = now + WEATHER_RETRY_DELAY_MS;
         }
+
+        if (Config::data.roomUpdateMin > 0 && !requestRoom())
+        {
+          roomRetryAtMs = now + ROOM_RETRY_DELAY_MS;
+        }
       }
       return;
     }
@@ -242,6 +296,21 @@ namespace Ble
         if (!requestWeather())
         {
           weatherRetryAtMs = now + WEATHER_RETRY_DELAY_MS;
+        }
+      }
+    }
+
+    if (Config::data.roomUpdateMin > 0)
+    {
+      uint32_t roomIntervalMs = static_cast<uint32_t>(Config::data.roomUpdateMin) * 60000UL;
+      bool retryDue = (roomRetryAtMs != 0) && (static_cast<int32_t>(now - roomRetryAtMs) >= 0);
+      bool intervalDue = (roomRetryAtMs == 0) && (now - lastRoomRequestMs >= roomIntervalMs);
+
+      if (retryDue || intervalDue)
+      {
+        if (!requestRoom())
+        {
+          roomRetryAtMs = now + ROOM_RETRY_DELAY_MS;
         }
       }
     }

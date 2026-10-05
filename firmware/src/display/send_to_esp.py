@@ -10,12 +10,23 @@ TX_UUID = "44d2187d-f65e-4a55-b5fa-00da1726c6f1"
 SERVICE_UUID = "6e7bdab4-e3c6-45ce-a0ef-f7e4d2c8ae45"
 
 weather_refresh_event = None
+room_refresh_event = None
 
 def on_notification(_, data: bytearray):
     message = data.decode("utf-8", errors="ignore")
     print("ESP:", message)
     if message == "REFRESH_WEATHER" and weather_refresh_event is not None:
         weather_refresh_event.set()
+    elif message == "REFRESH_ROOM" and room_refresh_event is not None:
+        room_refresh_event.set()
+
+def get_room_data() -> str:
+    payload = {
+        "temperature_c": 22.0,
+        "humidity_percent": 45,
+        "pressure_hpa": 1013.25,
+    }
+    return json.dumps(payload, separators=(",", ":"))
 
 def get_weather(city: str) -> str:
     try:
@@ -87,8 +98,9 @@ def get_weather(city: str) -> str:
         return ""
 
 async def main():
-    global weather_refresh_event
+    global weather_refresh_event, room_refresh_event
     weather_refresh_event = asyncio.Event()
+    room_refresh_event = asyncio.Event()
 
     while True:
         try:
@@ -115,26 +127,37 @@ async def main():
                 while client.is_connected:
                     if first_sent:
                         now = datetime.now().strftime(r"%Y-%m-%dT%H:%M:%S")
-                        print("Sending initial TIME and WEATHER data...")
+                        print("Sending initial TIME, WEATHER, and ROOM data...")
                         await client.write_gatt_char(RX_UUID, f"TIME:{now}".encode())
                         
                         weather_data = get_weather('Gdansk')
                         if weather_data:
                             await client.write_gatt_char(RX_UUID, f"WEATHER:{weather_data}".encode())
                         
+                        room_data = get_room_data()
+                        await client.write_gatt_char(RX_UUID, f"ROOM:{room_data}".encode())
+
                         first_sent = False
                     else:
-                        weather_data = get_weather('Gdansk')
-                        if weather_data:
-                            print("Sending updated WEATHER data...")
-                            await client.write_gatt_char(RX_UUID, f"WEATHER:{weather_data}".encode())
+                        if weather_refresh_event.is_set():
+                            weather_refresh_event.clear()
+                            weather_data = get_weather('Gdansk')
+                            if weather_data:
+                                print("Sending updated WEATHER data...")
+                                await client.write_gatt_char(RX_UUID, f"WEATHER:{weather_data}".encode())
 
-                    weather_refresh_event.clear()
+                        if room_refresh_event.is_set():
+                            room_refresh_event.clear()
+                            room_data = get_room_data()
+                            print("Sending updated ROOM data...")
+                            await client.write_gatt_char(RX_UUID, f"ROOM:{room_data}".encode())
+
                     while (
                         client.is_connected
                         and not weather_refresh_event.is_set()
+                        and not room_refresh_event.is_set()
                     ):
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(0.5)
 
         except Exception as e:
             print(f"Connection lost or error occurred: {e}")

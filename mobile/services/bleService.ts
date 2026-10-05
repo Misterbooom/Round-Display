@@ -229,7 +229,7 @@ export const BleAPI = {
 		if (!Number.isInteger(brightness) || brightness < 0 || brightness > 100) {
 			return rejectInvalidArgument('Brightness must be an integer between 0 and 100.')
 		}
-		// Firmware brightness is 0-255; UI uses 0-100%
+		// firmware brightness is 0-255; ui uses 0-100%
 		const scaled = Math.round((brightness / 100) * 255)
 		return getNativeBleModule().sendBrightness(scaled)
 	},

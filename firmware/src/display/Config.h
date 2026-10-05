@@ -17,6 +17,7 @@ namespace Config
     bool useCelsius = true;
     uint16_t weatherUpdateMin = 30;
     uint16_t batteryUpdateMin = 5;
+    uint16_t roomUpdateMin = 5;
   };
 
   inline Data data;
@@ -39,6 +40,7 @@ namespace Config
     preferences.putBool("useCelsius", data.useCelsius);
     preferences.putUShort("weatherMin", data.weatherUpdateMin);
     preferences.putUShort("batteryMin", data.batteryUpdateMin);
+    preferences.putUShort("roomMin", data.roomUpdateMin);
   }
 
   inline void load()
@@ -66,6 +68,9 @@ namespace Config
 
     data.batteryUpdateMin =
         preferences.getUShort("batteryMin", 5);
+
+    data.roomUpdateMin =
+        preferences.getUShort("roomMin", 5);
   }
 
   inline void reset()

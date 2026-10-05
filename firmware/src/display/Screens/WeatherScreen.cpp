@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 #include <math.h>
 #include <stdio.h>
-#include "Config.h"
+#include "../Config.h"
 
 namespace WeatherScreen
 {
