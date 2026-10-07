@@ -37,7 +37,7 @@ It displays PC stats over USB, gets weather and settings from an Android compani
   </tr>
 </table>
 
-> [Watch the hardware demo](assets/videos/demo.mp4)
+![Hardware Demo](assets/videos/demo.gif)
 
 ## Architecture
 
