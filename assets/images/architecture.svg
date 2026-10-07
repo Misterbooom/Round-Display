@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 799.6860000000001 215.60000000000002" width="799.6860000000001" height="215.60000000000002" style="--bg:#141414;--fg:#fafafa;--line:#8a8a8a;--accent:#8cb7fa;--muted:#b5b5b5;--surface:#1f1f1f;--border:#424242">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Google%20Sans:wght@400;500;600;700&amp;display=swap');
+  text { font-family: 'Google Sans', system-ui, sans-serif; }
+  svg {
+    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
+    --_text:          var(--fg);
+    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
+    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
+    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
+    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
+    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
+    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
+    --_group-fill:    var(--bg);
+    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
+    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
+    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
+  }
+</style>
+<defs>
+  <marker id="arrowhead" markerWidth="8" markerHeight="5" refX="7" refY="2.5" orient="auto">
+    <polygon points="0 0, 8 2.5, 0 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
+  </marker>
+  <marker id="arrowhead-start" markerWidth="8" markerHeight="5" refX="1" refY="2.5" orient="auto-start-reverse">
+    <polygon points="8 0, 0 2.5, 8 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
+  </marker>
+</defs>
+<polyline class="edge" data-from="PC" data-to="Disp" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="USB Serial" points="185.54599999999996,66.9 321.385,66.9 321.385,98.83333333333334 333.385,98.83333333333334" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="Phone" data-to="Disp" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="BLE TX" points="603.6220000000001,116.76666666666668 591.6220000000001,116.76666666666668 591.6220000000001,124.45000000000002 496.55,124.45000000000002 496.55,116.76666666666668 460.55,116.76666666666668" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="Disp" data-to="Phone" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="BLE RX" points="460.55,98.83333333333334 496.55,98.83333333333334 496.55,91.15 591.6220000000001,91.15 591.6220000000001,98.83333333333334 603.6220000000001,98.83333333333334" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="Sensor" data-to="Disp" data-style="solid" data-arrow-start="false" data-arrow-end="true" data-label="ESP-NOW" points="170.726,148.70000000000002 321.385,148.70000000000002 321.385,116.76666666666668 333.385,116.76666666666668" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<g class="edge-label" data-from="PC" data-to="Disp" data-label="USB Serial">
+  <rect x="220.05700000000002" y="50.90000000000001" width="69.328" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="254.721" y="66.05000000000001" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">USB Serial</text>
+</g>
+<g class="edge-label" data-from="Phone" data-to="Disp" data-label="BLE TX">
+  <rect x="504.55" y="108.45000000000002" width="55.072" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="532.086" y="123.60000000000002" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">BLE TX</text>
+</g>
+<g class="edge-label" data-from="Disp" data-to="Phone" data-label="BLE RX">
+  <rect x="504.55" y="75.15" width="55.072" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="532.086" y="90.30000000000001" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">BLE RX</text>
+</g>
+<g class="edge-label" data-from="Sensor" data-to="Disp" data-label="ESP-NOW">
+  <rect x="224.21499999999995" y="132.70000000000002" width="65.17" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="256.79999999999995" y="147.85000000000002" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">ESP-NOW</text>
+</g>
+<g class="node" data-id="PC" data-label="Linux PC
+(.NET Daemon)" data-shape="rectangle">
+  <rect x="49.48899999999998" y="40" width="136.057" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="117.51749999999998" y="66.9" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="117.51749999999998" dy="-3.9000000000000012">Linux PC</tspan><tspan x="117.51749999999998" dy="16.900000000000002">(.NET Daemon)</tspan></text>
+</g>
+<g class="node" data-id="Phone" data-label="Android Phone
+(React Native App)" data-shape="rectangle">
+  <rect x="603.6220000000001" y="80.9" width="156.06400000000002" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="681.6540000000001" y="107.80000000000001" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="681.6540000000001" dy="-3.9000000000000012">Android Phone</tspan><tspan x="681.6540000000001" dy="16.900000000000002">(React Native App)</tspan></text>
+</g>
+<g class="node" data-id="Sensor" data-label="Room Sensor
+(ESP32)" data-shape="rectangle">
+  <rect x="49.48899999999998" y="121.80000000000001" width="121.23700000000001" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="110.10749999999999" y="148.70000000000002" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="110.10749999999999" dy="-3.9000000000000012">Room Sensor</tspan><tspan x="110.10749999999999" dy="16.900000000000002">(ESP32)</tspan></text>
+</g>
+<g class="node" data-id="Disp" data-label="Round Display
+(ESP32-S3)" data-shape="rectangle">
+  <rect x="333.385" y="80.9" width="127.165" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="396.9675" y="107.80000000000001" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="396.9675" dy="-3.9000000000000012">Round Display</tspan><tspan x="396.9675" dy="16.900000000000002">(ESP32-S3)</tspan></text>
+</g>
+</svg>
