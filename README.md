@@ -1,12 +1,21 @@
+
+<div align="center">
+
 # Round Display
 
 This is a small PC telemetry monitor built with a XIAO ESP32-S3 and a Seeed 240×240 GC9A01 LCD. 
 
 It displays PC stats over USB, gets weather and settings from an Android companion app via BLE, and grabs room temperature, humidity, and pressure from a separate ESP32 sensor node over ESP-NOW.
 
-## Interface
+</div>
 
-<table>
+---
+<div align="center">
+
+## Interface
+</div>
+
+<table width="100%" align="center">
   <tr>
     <td align="center" width="33%">
       <img src="assets/images/clock.jpg" alt="Clock screen" width="180"><br />
@@ -37,11 +46,20 @@ It displays PC stats over USB, gets weather and settings from an Android compani
   </tr>
 </table>
 
-![Hardware Demo](assets/videos/demo.gif)
+<div align="center">
+  <br />
+  <img src="assets/videos/demo.gif" alt="Hardware Demo" />
+</div>
+
+---
 
 ## Architecture
 
-![System architecture](assets/images/architecture.svg)
+<div align="center">
+  <img src="assets/images/architecture.svg" alt="System architecture" />
+</div>
+
+---
 
 ## Features
 
@@ -53,6 +71,8 @@ It displays PC stats over USB, gets weather and settings from an Android compani
 - PCF8563 RTC keeps time when disconnected
 - Battery voltage monitoring via ADC divider
 - Wireless room sensor: A separate ESP32 reads temp/humidity/pressure from a DHT11 and BME280, broadcasts via ESP-NOW, then drops into a 120-second deep sleep.
+
+---
 
 ## Repository Structure
 
@@ -70,6 +90,8 @@ It displays PC stats over USB, gets weather and settings from an Android compani
 └── HARDWARE_GUIDE.md      # Pinouts and assembly quirks
 ```
 
+---
+
 ## Bill of Materials
 
 **Main Display:**
@@ -81,6 +103,8 @@ It displays PC stats over USB, gets weather and settings from an Android compani
 - Any standard ESP32 board (NodeMCU, WROOM, etc.)
 - DHT11 sensor
 - BME280 sensor
+
+---
 
 ## Getting Started
 
@@ -98,7 +122,8 @@ For the room sensor node:
 ```bash
 pio run -e sensor -t upload
 ```
-*(Check `platformio.ini` if you need to change your upload ports).*
+
+> *(Check `platformio.ini` if you need to change your upload ports).*
 
 ### Desktop Service
 
@@ -109,6 +134,7 @@ cd desktop
 dotnet restore
 dotnet run
 ```
+
 The daemon pings the display over serial (`115200` baud) and pushes stats every second. You can set it up as a systemd service to run in the background.
 
 ### Mobile App
@@ -121,11 +147,17 @@ npm install
 npm run android
 ```
 
+---
+
 ## Hardware Notes
 
-Check [HARDWARE_GUIDE.md](HARDWARE_GUIDE.md) before putting this together. A few major quirks to watch out for:
+> Check [HARDWARE_GUIDE.md](HARDWARE_GUIDE.md) before putting this together. 
+
+A few major quirks to watch out for:
 - I2C init order is annoying. The display has to be initialized *before* I2C, and the CST816D touch controller needs a manual reset sequence.
 - There's a 2-bit DIP switch on the back of the Seeed board. It must be flipped ON, or the RTC, touch, and battery monitor won't work at all.
+
+---
 
 ## Status & Roadmap
 
@@ -136,6 +168,8 @@ Most of the main features are done:
 - [x] Room sensor ESP-NOW integration
 - [ ] Add more screens (e.g., detailed weather forecast)
 - [ ] Implement settings sync from the phone
+
+---
 
 ## License
 
