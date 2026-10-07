@@ -362,7 +362,7 @@ export default function HomeScreen() {
 
 				<SettingsRow icon='settings' label='Firmware' delay={500}>
 					<ThemedText type='default' style={{ color: iconColor }}>
-						v1.0.3
+						v1.0.0
 					</ThemedText>
 				</SettingsRow>
 			</ThemedView>
