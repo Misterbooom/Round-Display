@@ -301,9 +301,9 @@ namespace RoomScreen
 
     RoomData parsed;
 
-    parsed.temperatureC = doc["temperature_c"] | (doc["temp"] | NAN);
-    parsed.humidityPercent = doc["humidity_percent"] | (doc["humidity"] | -1);
-    parsed.pressureHpa = doc["pressure_hpa"] | (doc["pressure"] | NAN);
+    parsed.temperatureC = doc["temperature_c"] | (doc["temp"] | (doc["t"] | NAN));
+    parsed.humidityPercent = doc["humidity_percent"] | (doc["humidity"] | (doc["h"] | -1));
+    parsed.pressureHpa = doc["pressure_hpa"] | (doc["pressure"] | (doc["p"] | NAN));
 
     if (parsed.pressureHpa > 2000.0f)
     {

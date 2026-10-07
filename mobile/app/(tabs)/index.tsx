@@ -8,7 +8,6 @@ import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { typography } from '@/constants/theme'
 import { useThemeColor } from '@/hooks/use-theme-color'
-import {getWeather} from "@/services/weatherService";
 
 const CIRCUMFERENCE = 2 * Math.PI * 45
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
@@ -213,12 +212,6 @@ export default function HomeScreen() {
 	}, [targetOffset, animOffset])
 
 	useEffect(() => {
-		const syncDeviceData = async () => {
-			setLastSynced(new Date())
-			const weather = await getWeather('Gdansk')
-			await BleAPI.sendWeather(weather)
-		}
-
 		const unsubscribe = subscribeToBleEvents({
 			onConnectionChange: async (status) => {
 				switch (status) {
@@ -251,7 +244,7 @@ export default function HomeScreen() {
 				setBatteryPercentage(batteryLevel)
 			},
 			onWeatherRequested: () => {
-				syncDeviceData()
+				setLastSynced(new Date())
 			},
 		})
 

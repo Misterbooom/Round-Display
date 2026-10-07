@@ -20,6 +20,7 @@ export type BleSnapshot = {
 	weatherRequestPending: boolean
 	sessionActive: boolean
 	serviceRunning: boolean
+	lastRoomData?: string | null
 }
 
 export type BleErrorDetails = {
@@ -35,6 +36,8 @@ type NativeBleModule = {
 	sendWeather(weather: string): Promise<boolean>
 	sendBrightness(brightness: number): Promise<boolean>
 	sendPing(): Promise<boolean>
+	sendRoomData(roomJson: string): Promise<boolean>
+	getRoomData(): Promise<string | null>
 	getConnectionState(): Promise<BleConnectionStatus>
 	getSnapshot(): Promise<BleSnapshot>
 	startService(): Promise<boolean>
@@ -234,6 +237,11 @@ export const BleAPI = {
 		return getNativeBleModule().sendBrightness(scaled)
 	},
 	sendPing: (): Promise<boolean> => getNativeBleModule().sendPing(),
+	sendRoomData: (roomJson: string): Promise<boolean> => {
+		if (!roomJson.trim()) return rejectInvalidArgument('Room payload cannot be empty.')
+		return getNativeBleModule().sendRoomData(roomJson)
+	},
+	getRoomData: (): Promise<string | null> => getNativeBleModule().getRoomData(),
 	setCity: (city: string): Promise<boolean> => {
 		if (!city.trim()) return rejectInvalidArgument('City cannot be empty.')
 		return getNativeBleModule().setCity(city.trim())

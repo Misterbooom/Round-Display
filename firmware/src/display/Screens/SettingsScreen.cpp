@@ -60,11 +60,6 @@ namespace SettingsScreen
             SettingsRenderer::makeAction("Refresh now", Callbacks::refreshWeather_cb));
         static auto weatherPage = SettingsRenderer::makePage("Weather", weatherItems);
 
-        static auto roomItems = SettingsRenderer::makeItems(
-            SettingsRenderer::makeSlider("Refresh rate", 1, 60, Config::data.roomUpdateMin, "min", Callbacks::roomRefreshRate_cb),
-            SettingsRenderer::makeAction("Refresh now", Callbacks::refreshRoom_cb));
-        static auto roomPage = SettingsRenderer::makePage("Room", roomItems);
-
         static auto timeoutItems = SettingsRenderer::makeItems(
             SettingsRenderer::makeSlider("Brightness", 10, 100, Config::data.brightness, "%", Callbacks::brightness_cb),
             SettingsRenderer::makeSlider("Screen timeout", 5, 120, Config::data.timeoutSec == 0 ? 30 : Config::data.timeoutSec, "s", Callbacks::screenTimeout_cb),
@@ -79,7 +74,6 @@ namespace SettingsScreen
         static auto displayItems = SettingsRenderer::makeItems(
             SettingsRenderer::makeTab("Clock", clockPage),
             SettingsRenderer::makeTab("Weather", weatherPage),
-            SettingsRenderer::makeTab("Room", roomPage),
             SettingsRenderer::makeTab("Screen", timeoutPage),
             SettingsRenderer::makeTab("System", systemPage));
         static auto startPage = SettingsRenderer::makePage("Settings", displayItems);

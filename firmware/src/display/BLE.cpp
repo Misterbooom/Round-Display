@@ -1,13 +1,17 @@
 #include "BLE.h"
 
 #include <NimBLEDevice.h>
+#include <WiFi.h>
+#include <esp_now.h>
+#include <esp_wifi.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <atomic>
 #include <string>
+#include <cstring>
 #include <utils.h>
 #include "Config.h"
-#include <set>
+
 namespace Ble
 {
   namespace
@@ -17,12 +21,13 @@ namespace Ble
     constexpr char TX_UUID[] = "44d2187d-f65e-4a55-b5fa-00da1726c6f1";
     constexpr char DEVICE_NAME[] = "Round-Display";
 
+    constexpr uint8_t ESPNOW_CHANNEL = 1;
     constexpr uint16_t BLE_MTU_SIZE = 512;
     constexpr size_t CMD_QUEUE_LEN = 8;
     constexpr size_t CMD_MAX_SIZE = 512;
     constexpr uint32_t INITIAL_SYNC_DELAY_MS = 2000UL;
     constexpr uint32_t WEATHER_RETRY_DELAY_MS = 5000UL;
-    constexpr uint32_t ROOM_RETRY_DELAY_MS = 5000UL;
+    constexpr uint32_t SENSOR_PAYLOAD_COOLDOWN_MS = 10000UL;
 
     struct CommandMsg
     {
@@ -35,15 +40,28 @@ namespace Ble
     WeatherCallback onWeatherReceive = nullptr;
     RoomCallback onRoomReceive = nullptr;
 
-    std::set<uint16_t> activeSubscribers;
+    std::atomic<bool> clientSubscribed{false};
     std::atomic<bool> pendingInitialSync{false};
     std::atomic<uint32_t> syncDelayStartMs{0};
 
     uint32_t lastWeatherRequestMs = 0;
     uint32_t lastBatterySendMs = 0;
-    uint32_t weatherRetryAtMs = 0;
     uint32_t lastRoomRequestMs = 0;
-    uint32_t roomRetryAtMs = 0;
+    uint32_t weatherRetryAtMs = 0;
+    uint32_t lastSensorPayloadMs = 0;
+    std::string lastSensorPayload;
+
+    bool enqueueCommand(const char *payload)
+    {
+      if (commandQueue == nullptr || payload == nullptr)
+      {
+        return false;
+      }
+
+      CommandMsg msg{};
+      strncpy(msg.payload, payload, sizeof(msg.payload) - 1);
+      return xQueueSend(commandQueue, &msg, 0) == pdTRUE;
+    }
 
     bool sendNotification(const char *data)
     {
@@ -115,24 +133,57 @@ namespace Ble
       }
     };
 
+    void onSensorDataReceived(const uint8_t *macAddress, const uint8_t *data, int dataLength)
+    {
+      if (data == nullptr || dataLength <= 5 || dataLength >= CMD_MAX_SIZE ||
+          strncmp(reinterpret_cast<const char *>(data), "ROOM:", 5) != 0)
+      {
+        return;
+      }
+
+      std::string payload(reinterpret_cast<const char *>(data) + 5, dataLength - 5);
+      if (!payload.empty() && payload.back() == '\0')
+      {
+        payload.pop_back();
+      }
+
+      uint32_t now = millis();
+      if (payload == lastSensorPayload && now - lastSensorPayloadMs < SENSOR_PAYLOAD_COOLDOWN_MS)
+      {
+        return;
+      }
+
+      char command[CMD_MAX_SIZE];
+      snprintf(command, sizeof(command), "ROOM:%s", payload.c_str());
+      if (enqueueCommand(command))
+      {
+        lastSensorPayload = payload;
+        lastSensorPayloadMs = now;
+        Serial.printf("[ESP-NOW] Room sensor data received: %s\n", payload.c_str());
+      }
+      else
+      {
+        Serial.println("[ESP-NOW] Room sensor command queue full");
+      }
+    }
+
     class TxCallbacks : public NimBLECharacteristicCallbacks
     {
     public:
       void onSubscribe(NimBLECharacteristic *characteristic, NimBLEConnInfo &connInfo, uint16_t subValue) override
       {
-        uint16_t connHandle = connInfo.getConnHandle();
-
         if (subValue & 0x01)
         {
-          activeSubscribers.insert(connHandle);
           syncDelayStartMs.store(millis());
           pendingInitialSync.store(true);
-          Serial.printf("[BLE] Client %d subscribed to TX\n", connHandle);
+          clientSubscribed.store(true);
+          Serial.println("[BLE] Client subscribed to TX");
         }
         else
         {
-          activeSubscribers.erase(connHandle);
-          Serial.printf("[BLE] Client %d unsubscribed from TX\n", connHandle);
+          clientSubscribed.store(false);
+          pendingInitialSync.store(false);
+          Serial.println("[BLE] Client unsubscribed from TX");
         }
       }
     };
@@ -142,20 +193,17 @@ namespace Ble
     public:
       void onConnect(NimBLEServer *srv, NimBLEConnInfo &connInfo) override
       {
-        Serial.printf("[BLE] Device connected (total: %d)\n", srv->getConnectedCount());
-
-        srv->updateConnParams(connInfo.getConnHandle(), 24, 48, 0, 400);
+        Serial.println("[BLE] Device connected");
       }
 
       void onDisconnect(NimBLEServer *srv, NimBLEConnInfo &connInfo, int reason) override
       {
-        activeSubscribers.erase(connInfo.getConnHandle());
-
-        if (activeSubscribers.empty())
+        if (srv->getConnectedCount() == 0)
         {
+          clientSubscribed.store(false);
           pendingInitialSync.store(false);
         }
-        Serial.printf("[BLE] Device disconnected (remaining: %d), reason: %d\n", srv->getConnectedCount(), reason);
+        Serial.println("[BLE] Device disconnected");
       }
     };
 
@@ -176,8 +224,9 @@ namespace Ble
 
   bool isConnected()
   {
-    return server != nullptr && !activeSubscribers.empty();
+    return server != nullptr && server->getConnectedCount() > 0 && clientSubscribed.load();
   }
+
   bool requestWeather()
   {
     if (!isConnected())
@@ -209,7 +258,6 @@ namespace Ble
     if (sent)
     {
       lastRoomRequestMs = millis();
-      roomRetryAtMs = 0;
     }
 
     Serial.printf("[BLE] Room request: %s\n", sent ? "sent" : "failed");
@@ -247,15 +295,6 @@ namespace Ble
       }
     }
 
-    if (server != nullptr && server->getConnectedCount() < CONFIG_BT_NIMBLE_MAX_CONNECTIONS)
-    {
-      NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
-      if (adv != nullptr && !adv->isAdvertising())
-      {
-        adv->start();
-      }
-    }
-
     if (!isConnected())
     {
       return;
@@ -276,11 +315,6 @@ namespace Ble
         {
           weatherRetryAtMs = now + WEATHER_RETRY_DELAY_MS;
         }
-
-        if (Config::data.roomUpdateMin > 0 && !requestRoom())
-        {
-          roomRetryAtMs = now + ROOM_RETRY_DELAY_MS;
-        }
       }
       return;
     }
@@ -300,21 +334,6 @@ namespace Ble
       }
     }
 
-    if (Config::data.roomUpdateMin > 0)
-    {
-      uint32_t roomIntervalMs = static_cast<uint32_t>(Config::data.roomUpdateMin) * 60000UL;
-      bool retryDue = (roomRetryAtMs != 0) && (static_cast<int32_t>(now - roomRetryAtMs) >= 0);
-      bool intervalDue = (roomRetryAtMs == 0) && (now - lastRoomRequestMs >= roomIntervalMs);
-
-      if (retryDue || intervalDue)
-      {
-        if (!requestRoom())
-        {
-          roomRetryAtMs = now + ROOM_RETRY_DELAY_MS;
-        }
-      }
-    }
-
     if (Config::data.batteryUpdateMin > 0)
     {
       uint32_t batteryIntervalMs = static_cast<uint32_t>(Config::data.batteryUpdateMin) * 60000UL;
@@ -322,6 +341,16 @@ namespace Ble
       {
         sendBattery();
         lastBatterySendMs = now;
+      }
+    }
+
+    if (Config::data.roomUpdateMin > 0)
+    {
+      uint32_t roomIntervalMs = static_cast<uint32_t>(Config::data.roomUpdateMin) * 60000UL;
+      if (now - lastRoomRequestMs >= roomIntervalMs)
+      {
+        requestRoom();
+        lastRoomRequestMs = now;
       }
     }
   }
@@ -371,6 +400,22 @@ namespace Ble
     advertising->enableScanResponse(true);
     advertising->setName(DEVICE_NAME);
     advertising->start();
+
+    WiFi.mode(WIFI_STA);
+    esp_wifi_set_channel(ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
+    if (esp_now_init() != ESP_OK)
+    {
+      Serial.println("[ESP-NOW] Initialization failed");
+    }
+    else if (esp_now_register_recv_cb(onSensorDataReceived) != ESP_OK)
+    {
+      Serial.println("[ESP-NOW] Failed to register receive callback");
+      esp_now_deinit();
+    }
+    else
+    {
+      Serial.println("[ESP-NOW] Room sensor receiver ready");
+    }
 
     Serial.println("[BLE] Init done!");
   }

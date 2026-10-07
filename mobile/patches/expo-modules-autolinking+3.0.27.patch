@@ -1,0 +1,13 @@
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/test/kotlin/com/modules/plugin/connfiguration/ExpoAutolinkingConfigTest.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/test/kotlin/com/modules/plugin/connfiguration/ExpoAutolinkingConfigTest.kt
+index eeb06db..130b62d 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/test/kotlin/com/modules/plugin/connfiguration/ExpoAutolinkingConfigTest.kt
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/test/kotlin/com/modules/plugin/connfiguration/ExpoAutolinkingConfigTest.kt
+@@ -68,7 +68,7 @@ class ExpoAutolinkingConfigTest {
+ 
+     Truth.assertThat(expoModule.projects.firstOrNull()?.sourceDir)
+       .isEqualTo("/Users/lukasz/work/expo/packages/expo/android")
+-    Truth.assertThat(expoModule.modules.firstOrNull())
++    Truth.assertThat(expoModule.projects.firstOrNull()?.modules?.firstOrNull())
+       .isEqualTo("expo.modules.fetch.ExpoFetchModule")
+ 
+     Truth.assertThat(expoNetworkAddonsModule.projects.firstOrNull()?.sourceDir)

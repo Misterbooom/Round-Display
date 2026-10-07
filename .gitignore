@@ -16,13 +16,7 @@ web-build/
 expo-env.d.ts
 
 # Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+
 
 # Metro
 .metro-health-check*
@@ -46,7 +40,6 @@ example
 
 # generated native folders
 /ios
-/android
 bin/
 .idea/
 obj/
